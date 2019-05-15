@@ -20,7 +20,14 @@ ds.dtypes
 ds.price=ds.price.str.replace('$','')
 ds.price=ds.price.str.replace(',','')
 ds.price=ds.price.astype('float64')
+round(ds.price.mean(),3)
+round(ds.price.max(),3)
+np.percentile(ds.price, 99)
+
+
 ds=ds[ds.price<=440]
+np.percentile(ds.price, 90)
+
 ds.dropna(how='any',inplace=True)
 ds.isna().sum()
 
@@ -51,16 +58,16 @@ ds_lessthan1kmcc=ds[ds.DistanceFromCC<=1]
 ds_groupby_roomtype=ds_lessthan1kmcc.groupby(['room_type']).mean()
 round(ds_groupby_roomtype[ds_groupby_roomtype.index=='Private room']['price'],1)
 
-ds.value_counts
+
 ds=pd.get_dummies(ds)
 
 X = ds.drop("price", axis=1)
 y = ds.loc[:, 'price'].values
 
 from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.7, random_state = 200)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 200)
 
-round(X_train.accommodates.mean()-X_test.accommodates.mean(),3)
+round(abs(X_train.accommodates.mean()-X_test.accommodates.mean()),3)
 
 # Fitting Random Forest Regression to the dataset
 from sklearn.ensemble import RandomForestRegressor
