@@ -1,4 +1,4 @@
-setwd("G:\\Gunnvant Singh\\Linear Regression")
+#setwd("G:\\Gunnvant Singh\\Linear Regression")
 data<-read.csv("DirectMarketing.csv")
 library(dplyr)
 library(ggplot2)
