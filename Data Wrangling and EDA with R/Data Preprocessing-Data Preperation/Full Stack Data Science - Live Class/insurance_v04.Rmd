@@ -1,0 +1,282 @@
+---
+title: "Exploratory data analysis - insurance dataset"
+output: html_notebook
+---
+
+
+##Set the working directory and reading the csv file
+```{r}
+setwd("C:/Users/Sowmya CR/Google Drive/jigsaw/EDA")
+
+insurance <- read.csv("insurance.csv", stringsAsFactors = TRUE)
+```
+
+
+## Look at data dimensions and columns
+```{r}
+dim(insurance)
+names(insurance)
+# View(insurance)
+```
+About the dataset - 
+
+##Summary statistics and data structure
+```{r}
+# Create data dictionary if not available. Identify numerical and categorical variables.
+str(insurance)
+
+# Summary statistics - identify outliers
+summary(insurance)
+
+```
+
+```{r}
+# Number of rows with outliers
+library(dplyr)
+
+insurance%>%filter(age>70)%>%nrow()
+
+
+```
+
+
+#Percentile breakup
+```{r}
+
+
+quantile(insurance$charges,p=c(76:100)/100)
+```
+
+
+## Univariate analysis of categorical variables - create tabulations & proportions to understand breakup amongst categories
+```{r}
+##Tabulations
+table(insurance$sex)
+
+table(insurance$smoker)
+
+table(insurance$region)
+
+
+#Proportions - prop.table
+
+
+```
+
+
+##Bivariate analysis of categorical variables - cross tabulations & proportions
+```{r}
+table(insurance$sex, insurance$region)
+table(insurance$sex, insurance$smoker)
+table(insurance$region, insurance$smoker)
+
+##Proportions using prop.table
+
+
+```
+
+## Univariate analysis of numerical variables & identifying outliers
+```{r}
+box_age <- boxplot(insurance$age)
+list <- box_age$out
+
+box_bmi <- boxplot(insurance$bmi)
+box_bmi$out
+box_bmi$stats # five number summary
+
+boxplot(insurance$charges)
+```
+
+##Treatment of outliers
+```{r}
+#gives the positions in the data where outliers are present
+index<-which(insurance$age %in% list)
+
+# Find values at the index position
+insurance$age[index]
+
+# Replace the outliers with third quartile
+box_age$stats[5]
+
+insurance$age[index] <- box_age$stats[5]
+
+```
+
+
+##Check for missing values
+```{r}
+colSums(is.na(insurance))
+
+##replace missing values with mean
+insurance$bmi[is.na(insurance$bmi)]<-mean(insurance$bmi,na.rm=TRUE)
+
+
+#Replace missing values with median
+insurance$bmi[is.na(insurance$bmi)]<- box_bmi[3]
+
+
+```
+
+##Aggregating continuous vs categorical
+```{r}
+aggregate(charges ~ smoker, data = insurance, FUN=mean)
+
+aggregate(charges ~ sex, data = insurance, FUN=mean)
+
+aggregate(charges ~ region, data = insurance, FUN=mean)
+
+aggregate(charges ~ smoker+sex, data = insurance, FUN=mean)
+
+agg_data <- aggregate(charges ~ smoker+sex+region, data = insurance, FUN=mean)
+
+##Sort ascending & descending
+agg_data[order(-agg_data$charges),]
+
+```
+
+##analysis with ggplot
+```{r}
+library(ggplot2)
+ggplot(insurance,aes(x=charges)) + geom_histogram(aes(fill=as.factor(smoker)),position="dodge")
+ggplot(insurance,aes(x=charges)) + geom_histogram(aes(fill=as.factor(smoker)),position="dodge") + facet_grid(region~sex)
+```
+
+
+```{r}
+#box plots : 
+ggplot(insurance,aes(y=charges,x=sex,fill=as.factor(sex)))+ geom_boxplot()
+ggplot(insurance,aes(y=charges,x=sex,fill=as.factor(sex)))+ geom_boxplot() +facet_grid(region~smoker)
+```
+
+```{r}
+#bmi vs charges
+library(ggplot2)
+
+insurance$bmi = as.numeric(insurance$bmi)
+class(insurance$bmi)
+
+p<-ggplot(insurance,aes(x=bmi,y=charges,color=smoker))
+p+geom_point()+geom_smooth(aes(color=smoker))
+p+geom_point()+facet_grid(.~sex)
+p+geom_point()+facet_grid(smoker~region)
+```
+
+## Binning numeric variables
+```{r}
+##Creating age groups
+range(insurance$age)
+insurance$agegroup[insurance$age<25] <- "18-24"
+insurance$agegroup[insurance$age >=25 & insurance$age < 35] <- "25-34"
+insurance$agegroup[insurance$age >=35 & insurance$age < 45] <- "35-44"
+insurance$agegroup[insurance$age >=45 & insurance$age < 55] <- "45-54"
+insurance$agegroup[insurance$age >=55 & insurance$age < 65] <- "55-65"
+
+class(insurance$agegroup)
+
+insurance$agegroup = as.factor(insurance$agegroup)
+
+library(plyr)
+
+count(insurance$agegroup)
+```
+
+
+```{r}
+#age vs charges
+p<-ggplot(insurance,aes(x=charges,y=age,color=as.factor(sex)))
+p+geom_point()
+p+geom_point()+facet_grid(.~smoker)
+p+geom_point()+facet_grid(smoker~region)
+```
+
+## Age group vs charges
+```{r}
+ggplot(data = insurance, aes(x=agegroup, y=charges))+ geom_boxplot(aes(fill=agegroup))+facet_grid(.~sex)
+
+ggplot(data = insurance, aes(x=agegroup, y=charges))+ geom_boxplot(aes(fill=agegroup))+facet_grid(.~region)
+
+ggplot(data = insurance, aes(x=agegroup, y=charges))+ geom_boxplot(aes(fill=agegroup))+facet_grid(.~smoker)
+
+ggplot(data = insurance, aes(x=agegroup, y=charges))+ geom_boxplot(aes(fill=agegroup))+facet_grid(region~smoker)
+```
+
+##Children as categorical variable
+```{r}
+insurance$children <- as.factor(insurance$children)
+
+count(insurance$children)
+
+ggplot(data = insurance, aes(x=children, y=charges))+ geom_boxplot()
+```
+
+
+# exploring relationships among features: correlation matrix
+```{r}
+corrmat <- cor(insurance[c("age", "bmi", "children", "charges")])
+
+library(corrplot)
+
+#Visualise the correlation
+corrplot(corrmat, method = "circle")
+```
+
+```{r}
+# visualing relationships among features: scatterplot matrix
+pairs(insurance[c("age", "bmi", "children", "charges")])
+```
+
+```{r}
+#Data Preparation
+#Adding new variables
+
+# add a higher-order "age" term
+insurance$age2 <- insurance$age^2
+
+# add an indicator for BMI >= 30
+insurance$bmi30 <- ifelse(insurance$bmi >= 30, 1, 0)
+```
+
+
+##Dummy variable creation
+```{r}
+library(dummies)
+
+
+
+dummy_insurance=dummy.data.frame(insurance)
+
+head(dummy_insurance)
+
+
+
+
+```
+
+##Normalising variables
+```{r}
+## scale variables
+library(scales)
+
+x<-scale(dummy_insurance)
+
+head(x)
+
+```
+
+
+##Partitioning data into training and test sets
+```{r}
+## split into training and test sets
+library(caTools)
+
+set.seed(123)
+split = sample.split(insurance$charges, SplitRatio = 0.7)
+traindata = subset(insurance, split == TRUE)
+testdata = subset(insurance, split == FALSE)
+dim(traindata)
+
+head(testdata)
+
+```
+
+
